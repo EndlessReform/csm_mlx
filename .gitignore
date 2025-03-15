@@ -4,3 +4,5 @@
 inits
 __pycache__
 out.wav
+*.wav
+!tests/sky.wav

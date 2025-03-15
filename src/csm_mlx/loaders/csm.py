@@ -36,6 +36,7 @@ class CSM:
     config: RQTransformerModelArgs
     codec: MimiModel
     prompt_encoder: CSMPromptEncoder
+    history: Optional[Tuple[any, any]]
 
     def __init__(
         self, model_id="jkeisling/csm-1b", checkpoint_dir: Optional[str] = None
@@ -62,16 +63,22 @@ class CSM:
         model = model.apply(lambda p: p.astype(mx.bfloat16))
         mx.eval(model.parameters())
         model.eval()
+
         self.codec = load_mimi()
         self.model = model
         self.prompt_encoder = prompt_encoder
         self.sampling_rate = 24_000
+
+        # State mgmt
+        self.segments = []
+        self.history = None
 
     def __call__(
         self,
         text: str,
         speaker_id: int,
         context: Optional[List[Segment]] = None,
+        use_last_gens: bool = False,
         temp: float = 0.9,
         fast_temp: float = 0.9,
         top_k: int = 64,
@@ -83,6 +90,13 @@ class CSM:
         prompt, prompt_mask = self._prompt_encode(
             text, speaker_id, context if context is not None else []
         )
+        if use_last_gens and self.history is not None:
+            prev_prompt, prev_mask = self.history
+            prompt = mx.concat([prev_prompt, prompt], axis=1)
+            prompt_mask = mx.concat([prev_mask, prompt_mask], axis=1)
+        else:
+            # Reset cache
+            self.history = None
 
         decode_start_time = time.time()
         gen = SingleBatchGenerator(
@@ -121,6 +135,14 @@ class CSM:
             f"Generated in {decode_duration:.2f}s ({(out_len / decode_duration):.2f} tokens/s, {((decode_duration * 1000) / out_len):.2f}ms/token), {(out_len / frame_rate) / decode_duration:.2f}x realtime"
         )
         mx.metal.clear_cache()
+
+        # Persist history in case we need it
+        new_audio, new_audio_mask = self.prompt_encoder.tokenize_audio(codes)
+        self.history = [
+            mx.concat([prompt, new_audio[mx.newaxis, :, :]], axis=1),
+            mx.concat([prompt_mask, new_audio_mask[mx.newaxis, :, :]], axis=1),
+        ]
+
         return np.array(pcm).flatten()
 
     def _prompt_encode(
