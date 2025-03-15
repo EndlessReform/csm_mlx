@@ -39,7 +39,10 @@ class CSM:
     kv_cache: Optional[List[any]]
 
     def __init__(
-        self, model_id="jkeisling/csm-1b", checkpoint_dir: Optional[str] = None
+        self,
+        model_id="jkeisling/csm-1b",
+        checkpoint_dir: Optional[str] = None,
+        depth=32,
     ):
         checkpoint_dir = Path(
             checkpoint_dir
@@ -54,10 +57,16 @@ class CSM:
         config = RQTransformerModelArgs.from_json_file(
             str(checkpoint_dir / "config.json")
         )
-        tokenizer = Tokenizer.from_file(str(checkpoint_dir / "tokenizer.json"))
-        prompt_encoder = CSMPromptEncoder(tokenizer)
+        if depth > config.num_codebooks or depth < 4:
+            raise ValueError(
+                f"Only depths between 4 and {self.config.num_codebooks} supported; got {depth}"
+            )
+        self.depth = depth
 
-        model = CSMModel(config, model_type)
+        tokenizer = Tokenizer.from_file(str(checkpoint_dir / "tokenizer.json"))
+        prompt_encoder = CSMPromptEncoder(tokenizer, depth=depth)
+
+        model = CSMModel(config, model_type, depth=depth)
         model_path = str(checkpoint_dir / "model.safetensors")
         model.load_weights(model_path, strict=True)
         model = model.apply(lambda p: p.astype(mx.bfloat16))
@@ -201,6 +210,7 @@ class CSM:
             mimi_codes = self.codec.encode(
                 mx.array(segment.audio)[mx.newaxis, mx.newaxis, :]
             )
+            mimi_codes = mimi_codes[:, : self.depth, :]
             audio, audio_mask = self.prompt_encoder.tokenize_audio(mimi_codes)
             prompt_segments.append(audio)
             mask_segments.append(audio_mask)

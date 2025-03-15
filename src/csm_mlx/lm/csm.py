@@ -11,19 +11,28 @@ from csm_mlx.lm.config import ModelType
 
 
 class CSMModel(nn.Module):
-    def __init__(self, config: RQTransformerModelArgs, model_type: ModelType):
+    def __init__(
+        self,
+        config: RQTransformerModelArgs,
+        model_type: ModelType,
+        depth: Optional[int] = None,
+    ):
         super().__init__()
-        if model_type.family != "csm":
-            raise ValueError("Cannot load weights")
-
         self.config = config
+        if depth is None:
+            self.depth = self.config.num_codebooks
+        else:
+            # Assume validation happened at entry point
+            self.depth = depth
+
+        if model_type.family != "csm":
+            raise ValueError(f"Cannot load weights for {model_type.family}")
 
         self.embeddings = nn.Embedding(config.vocab_size, config.dim)
         self.codebook_embeddings = nn.Embedding(
             config.codebook_size * config.num_codebooks, config.dim
         )
         self.codebook0_head = nn.Linear(config.dim, config.codebook_size, bias=False)
-        # TODO handle this, this sucks
         self.audio_head = mx.zeros(
             shape=[config.num_codebooks - 1, config.fast_dim, config.codebook_size]
         )
@@ -72,7 +81,7 @@ class CSMModel(nn.Module):
         text_embeds = self.embeddings(inputs[:, :, -1])[:, :, mx.newaxis, :]
         audio_tokens = inputs[:, :, :-1] + mx.arange(
             0,
-            self.config.num_codebooks * self.config.codebook_size,
+            self.depth * self.config.codebook_size,
             self.config.codebook_size,
         )
         audio_embeds = self.codebook_embeddings(audio_tokens)

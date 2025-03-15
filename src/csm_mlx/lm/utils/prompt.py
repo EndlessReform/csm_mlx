@@ -69,10 +69,10 @@ class CSMPromptEncoder:
     def __init__(
         self,
         tokenizer: Tokenizer,
-        num_codebooks: int = 32,
+        depth: int = 32,
     ):
         self.tokenizer = tokenizer
-        self.depth = num_codebooks
+        self.depth = depth
 
     def tokenize_text(self, text: str) -> Tuple[mx.array, mx.array]:
         text_codes: tokenizers.Encoding = self.tokenizer.encode(
@@ -95,7 +95,6 @@ class CSMPromptEncoder:
 
         eos_frame = mx.zeros([mimi_codes.shape[0], 1])
         audio_tokens = mx.concat([mimi_codes, eos_frame], axis=1)
-        # TODO is this right? check this later
         audio_frame = mx.zeros([audio_tokens.shape[1], self.depth + 1], dtype=mx.int64)
         audio_frame_mask = mx.zeros_like(audio_frame)
 

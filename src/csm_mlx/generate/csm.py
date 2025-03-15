@@ -66,7 +66,7 @@ class SingleBatchGenerator:
         curr_sample = c0_sample
 
         decoder_cache = make_prompt_cache(self.model, is_fast=True)
-        for i in range(1, self.model.config.num_codebooks):
+        for i in range(1, min(self.model.depth, self.model.config.num_codebooks)):
             code_logits = self.model.forward_generate_fast(
                 curr_h, decoder_cache, codebook_idx=i
             )
