@@ -89,7 +89,6 @@ class CSM:
         prompt, prompt_mask = self._prompt_encode(
             text, speaker_id, context if context is not None else []
         )
-
         decode_start_time = time.time()
         kv_cache = (
             self.kv_cache
@@ -138,6 +137,47 @@ class CSM:
         self.kv_cache = kv_cache
 
         return np.array(pcm).flatten()
+
+    def stream(
+        self,
+        text: str,
+        speaker_id: int,
+        context: Optional[List[Segment]] = None,
+        use_last_gens: bool = False,
+        temp: float = 0.9,
+        fast_temp: float = 0.9,
+        top_k: int = 64,
+        backbone_min_p: float = 0.05,
+    ):
+        prompt, prompt_mask = self._prompt_encode(
+            text, speaker_id, context if context is not None else []
+        )
+        kv_cache = (
+            self.kv_cache
+            if self.kv_cache is not None and use_last_gens
+            else make_prompt_cache(self.model)
+        )
+        mimi_kv_cache = make_prompt_cache(self.codec.decoder_transformer)
+        gen = SingleBatchGenerator(
+            self.model,
+            prompt,
+            prompt_mask,
+            GenerationSettings(
+                default_temp=temp,
+                default_fast_temp=fast_temp,
+                top_k=top_k,
+                min_p=backbone_min_p,
+            ),
+            kv_cache,
+        )
+        for frame in tqdm(gen):
+            if frame is not None:
+                pcm_chunk = self.codec.decode_step(frame, mimi_kv_cache)
+                audio_data = np.array(pcm_chunk).flatten()
+                yield audio_data
+
+        self.codec.decoder.reset()
+        mx.metal.clear_cache()
 
     def _prompt_encode(
         self, text: str, speaker_id: int, segments: List[Segment]
