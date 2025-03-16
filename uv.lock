@@ -292,7 +292,6 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "fastrtc", extra = ["vad"] },
-    { name = "huggingface-hub" },
     { name = "mlx" },
     { name = "mlx-lm" },
     { name = "numpy" },
@@ -316,11 +315,10 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.11" },
     { name = "fastrtc", extras = ["vad"], specifier = "==0.0.14" },
-    { name = "huggingface-hub", specifier = ">=0.29.3" },
     { name = "mlx", specifier = ">=0.23.2" },
     { name = "mlx-lm", specifier = ">=0.22.0" },
     { name = "numpy", specifier = "==2.1.0" },
-    { name = "pydantic", specifier = ">=2.10.6" },
+    { name = "pydantic", specifier = ">=2.0.6" },
     { name = "safetensors", specifier = ">=0.5.3" },
     { name = "scipy", specifier = ">=1.15.2" },
     { name = "soundfile", specifier = ">=0.13.1" },

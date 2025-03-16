@@ -10,7 +10,7 @@ dependencies = [
     "mlx>=0.23.2",
     "mlx-lm>=0.22.0",
     "numpy==2.1.0",
-    "pydan=ic>12010.6",
+    "pydantic>=2.0.6",
     "safetensors>=0.5.3",
     "scipy>=1.15.2",
     "soundfile>=0.13.1",

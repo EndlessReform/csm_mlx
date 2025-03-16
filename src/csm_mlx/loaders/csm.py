@@ -174,15 +174,24 @@ class CSM:
         fast_temp: float = 0.9,
         top_k: int = 64,
         backbone_min_p: float = 0.05,
+        keep_prompt_only=False
     ):
+        """
+        TODO this is very repetitive, I'll refactor this later
+        """
         prompt, prompt_mask = self._prompt_encode(
             text, speaker_id, context if context is not None else []
         )
+        prev_kv_cache = (
+            self.kv_cache if self.kv_cache is not None and keep_prompt_only else None
+        )
+
         kv_cache = (
             self.kv_cache
             if self.kv_cache is not None and use_last_gens
             else make_prompt_cache(self.model)
         )
+
         mimi_kv_cache = make_prompt_cache(self.codec.decoder_transformer)
         gen = SingleBatchGenerator(
             self.model,
@@ -201,6 +210,12 @@ class CSM:
                 pcm_chunk = self.codec.decode_step(frame, mimi_kv_cache)
                 audio_data = np.array(pcm_chunk).flatten()
                 yield audio_data
+
+        # Persist history in case we need it
+        if prev_kv_cache is None:
+            self.kv_cache = kv_cache
+        else:
+            self.kv_cache = prev_kv_cache
 
         self.codec.decoder.reset()
         mx.metal.clear_cache()
