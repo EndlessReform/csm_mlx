@@ -28,6 +28,14 @@ uv run webui/app.py --quantize q8
 
 For procedural examples, check out `example.ipynb`
 
+## FAQ
+
+If `uv sync` fails due to sentencepiece error, run:
+
+```bash
+brew install cmake
+```
+
 ## Roadmap
 
 - [x] Safetensors conversion
