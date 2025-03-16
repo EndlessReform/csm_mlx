@@ -53,7 +53,6 @@ def synthesize_speech(
         # Crude cache clear
         sample = sample.astype(np.float32) / 32768.0
         if sr != 24_000:
-            print(f"INPUT: {sr}, {len(sample)}")
             num_samples = int(len(sample) * 24_000 / sr)
             sample = resample(sample, num_samples)
 
