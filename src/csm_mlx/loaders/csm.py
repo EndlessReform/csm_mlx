@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from huggingface_hub import snapshot_download
 from pathlib import Path
 import mlx.core as mx
+import mlx.nn as nn
 import numpy as np
 import time
 from tokenizers import Tokenizer
@@ -42,6 +43,7 @@ class CSM:
         self,
         model_id="jkeisling/csm-1b",
         checkpoint_dir: Optional[str] = None,
+        quantization: str = "bf16",
         depth=32,
     ):
         checkpoint_dir = Path(
@@ -69,7 +71,10 @@ class CSM:
         model = CSMModel(config, model_type, depth=depth)
         model_path = str(checkpoint_dir / "model.safetensors")
         model.load_weights(model_path, strict=True)
-        model = model.apply(lambda p: p.astype(mx.bfloat16))
+        if quantization == "bf16":
+            model = model.apply(lambda p: p.astype(mx.bfloat16))
+        elif quantization == "q8":
+            nn.quantize(model, group_size=64, bits=8)
         mx.eval(model.parameters())
         model.eval()
 

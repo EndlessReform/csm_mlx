@@ -1,17 +1,35 @@
 import gradio as gr
-import re
-from huggingface_hub import snapshot_download, hf_hub_download
 import numpy as np
 from csm_mlx.loaders import CSM, Segment
 from typing import Tuple, Optional
 from scipy.signal import resample
+import argparse
 
 
-model = CSM()
-# model.warmup()
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Argument parser for code quantization"
+    )
+
+    parser.add_argument(
+        "--num_codes", type=int, default=32, help="Number of codes (default: 32)"
+    )
+
+    parser.add_argument(
+        "--quantize",
+        type=str,
+        choices=["f32", "bf16", "q8"],
+        default="bf16",
+        help="Quantization type (default: bf16, choices: f32, bf16, q8)",
+    )
+
+    return parser.parse_args()
 
 
-PREV_VOICE = None
+args = get_args()
+
+model = CSM(depth=args.num_codes, quantization=args.quantize)
+model.warmup()
 
 
 def synthesize_speech(
@@ -32,6 +50,7 @@ def synthesize_speech(
         context = []
     else:
         sr, sample = voice
+        # Crude cache clear
         sample = sample.astype(np.float32) / 32768.0
         if sr != 24_000:
             print(f"INPUT: {sr}, {len(sample)}")
@@ -42,14 +61,14 @@ def synthesize_speech(
 
     # Generate audio for each sentence individually
     # TODO add nltk splitting
-    print(f"TEMP: {temperature}, p: {min_p}")
     pcm = model(
         text=text,
         speaker_id=0,
         context=context,
         temp=temperature,
-        # TODO
+        # TODO kv caching
         use_last_gens=False,
+        keep_prompt_only=True,
         backbone_min_p=min_p,
     )
     pcm_list.append(pcm.flatten())
