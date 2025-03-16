@@ -24,6 +24,7 @@ class SingleBatchGenerator:
         prompt: mx.array,
         prompt_mask: mx.array,
         generation_settings: GenerationSettings,
+        kv_cache: Optional[List[any]] = None,
     ):
         self.model = model
         self.n_generated = 0
@@ -35,7 +36,7 @@ class SingleBatchGenerator:
 
         self.prompt = prompt
         self.prompt_mask = prompt_mask
-        self.cache = make_prompt_cache(model)
+        self.cache = kv_cache
         self.previous_codes = None
         self.generation_settings = generation_settings
 
@@ -65,7 +66,7 @@ class SingleBatchGenerator:
         curr_sample = c0_sample
 
         decoder_cache = make_prompt_cache(self.model, is_fast=True)
-        for i in range(1, self.model.config.num_codebooks):
+        for i in range(1, min(self.model.depth, self.model.config.num_codebooks)):
             code_logits = self.model.forward_generate_fast(
                 curr_h, decoder_cache, codebook_idx=i
             )
