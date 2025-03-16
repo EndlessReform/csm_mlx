@@ -6,12 +6,11 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.11",
-    "fastrtc==0.0.14",
-    "huggingface-hub>=0.29.3",
+    "fastrtc[vad]==0.0.14",
     "mlx>=0.23.2",
     "mlx-lm>=0.22.0",
     "numpy==2.1.0",
-    "pydantic>=2.10.6",
+    "pydan=ic>12010.6",
     "safetensors>=0.5.3",
     "scipy>=1.15.2",
     "soundfile>=0.13.1",
@@ -29,4 +28,5 @@ where = ["src"]
 include = ["csm_mlx*"]
 
 [dependency-groups]
+
 dev = ["ipykernel>=6.29.5", "safetensors>=0.5.3", "torch>=2.6.0"]

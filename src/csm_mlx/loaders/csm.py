@@ -87,6 +87,7 @@ class CSM:
         speaker_id: int,
         context: Optional[List[Segment]] = None,
         use_last_gens: bool = False,
+        keep_prompt_only: bool = False,
         temp: float = 0.9,
         fast_temp: float = 0.9,
         top_k: int = 64,
@@ -99,6 +100,10 @@ class CSM:
             text, speaker_id, context if context is not None else []
         )
         decode_start_time = time.time()
+        prev_kv_cache = (
+            self.kv_cache if self.kv_cache is not None and keep_prompt_only else None
+        )
+
         kv_cache = (
             self.kv_cache
             if self.kv_cache is not None and use_last_gens
@@ -143,9 +148,16 @@ class CSM:
         mx.metal.clear_cache()
 
         # Persist history in case we need it
-        self.kv_cache = kv_cache
+        if prev_kv_cache is None:
+            self.kv_cache = kv_cache
+        else:
+            self.kv_cache = prev_kv_cache
 
         return np.array(pcm).flatten()
+
+    def warmup(self):
+        print("Warming up the model")
+        self.__call__("This is a test", 0)
 
     def stream(
         self,
