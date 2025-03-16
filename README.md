@@ -10,17 +10,30 @@ Clone this repo.
 
 Get [uv](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already. Then:
 
-```
+```bash
 uv sync
 ```
 
-Then open `example.ipynb` for basic inference!
+Run the WebUI with:
+
+```bash
+uv run webui/app.py
+```
+
+Q8 quantization is available for a ~60% speedup at some loss of quality:
+
+```bash
+uv run webui/app.py --quantize q8
+```
+
+For procedural examples, check out `example.ipynb`
 
 ## Roadmap
 
 - [x] Safetensors conversion
 - [x] Core modeling and entry point
-- [ ] Streaming output
-- [ ] Gradio UI
+- [x] Gradio UI (blocking, streaming will be supported below)
+- [x] Streaming output (for model)
 - [ ] FastRTC speech-to-speech webui
+- [ ] Perf improvements
 - [ ] PyPI library
