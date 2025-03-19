@@ -174,7 +174,7 @@ class CSM:
         fast_temp: float = 0.9,
         top_k: int = 64,
         backbone_min_p: float = 0.05,
-        keep_prompt_only=False
+        keep_prompt_only=False,
     ):
         """
         TODO this is very repetitive, I'll refactor this later
@@ -237,8 +237,10 @@ class CSM:
             prompt_segments.append(tokens)
             mask_segments.append(tokens_mask)
 
-            # TODO allow for precomputed prompt / cache; just getting it working for now
             # assumes audio is 24khz resampled elsewhere
+            if segment.audio.ndim > 1 and segment.audio.shape[1] == 2:
+                segment.audio = segment.audio.mean(axis=1).flatten()
+
             mimi_codes = self.codec.encode(
                 mx.array(segment.audio)[mx.newaxis, mx.newaxis, :]
             )
