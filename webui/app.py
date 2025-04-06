@@ -1,6 +1,7 @@
 import gradio as gr
 import numpy as np
 from csm_mlx.loaders import CSM, Segment
+from csm_mlx.lm.utils.text import TextNormalizer
 from typing import Tuple, Optional
 from scipy.signal import resample
 import argparse
@@ -22,14 +23,17 @@ def get_args():
         default="bf16",
         help="Quantization type (default: bf16, choices: f32, bf16, q8)",
     )
+    parser.add_argument("--model-id", type=str, default="jkeisling/csm-1b")
 
     return parser.parse_args()
 
 
 args = get_args()
 
-model = CSM(depth=args.num_codes, quantization=args.quantize)
+model = CSM(model_id=args.model_id, depth=args.num_codes, quantization=args.quantize)
 model.warmup()
+
+normalizer = TextNormalizer()
 
 
 def synthesize_speech(
@@ -59,18 +63,28 @@ def synthesize_speech(
         context = [Segment(speaker=0, text=transcript, audio=sample)]
 
     # Generate audio for each sentence individually
-    # TODO add nltk splitting
-    pcm = model(
-        text=text,
-        speaker_id=0,
-        context=context,
-        temp=temperature,
-        # TODO kv caching
-        use_last_gens=False,
-        keep_prompt_only=True,
-        backbone_min_p=min_p,
-    )
-    pcm_list.append(pcm.flatten())
+
+    # Split the text into sentences
+    sentences = normalizer.sentenceize(text)
+    pcm_list = []
+
+    # Generate audio for each sentence individually
+    for i, sentence in enumerate(sentences):
+        pcm = model(
+            text=sentence,
+            speaker_id=0,
+            context=context,
+            temp=temperature,
+            # TODO kv caching
+            # Screw it, do a proper ring buffer later
+            use_last_gens=i > 0,
+            keep_prompt_only=True,
+            backbone_min_p=min_p,
+        )
+        pcm_list.append(pcm.flatten())
+        # Add 250ms of silence in between sentences
+        silence = np.zeros(int(0.25 * 24_000))
+        pcm_list.append(silence)
 
     # Concatenate all PCM arrays into one
     final_pcm = np.concatenate(pcm_list)

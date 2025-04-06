@@ -5,10 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "emoji>=2.14.1",
     "fastapi>=0.115.11",
     "fastrtc[vad]==0.0.14",
     "mlx>=0.23.2",
     "mlx-lm>=0.22.0",
+    "nltk>=3.9.1",
     "numpy==2.1.0",
     "pydantic>=2.0.6",
     "safetensors>=0.5.3",
