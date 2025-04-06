@@ -1,6 +1,18 @@
 import nltk
 import emoji
 from typing import List
+import re
+
+
+def nuke_parens(text):
+    # Replace opening or closing parens with a comma
+    text = re.sub(r"[()]", ",", text)
+    # Normalize: remove duplicate commas and excess space
+    text = re.sub(r",\s*,+", ", ", text)  # multiple commas to one
+    text = re.sub(r"\s+,", ", ", text)  # space before comma
+    text = re.sub(r",\s+", ", ", text)  # extra spaces after comma
+    text = re.sub(r"\s{2,}", " ", text)  # collapse extra spaces
+    return text.strip()
 
 
 class TextNormalizer:
@@ -19,6 +31,8 @@ class TextNormalizer:
         text = emoji.replace_emoji(text, "")
         # remove extra whitespace
         text = text.strip()
+        # Convert ` (`, `) ` to `, `
+        text = nuke_parens(text)
 
         return text
 

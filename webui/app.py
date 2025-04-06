@@ -70,18 +70,19 @@ def synthesize_speech(
 
     # Generate audio for each sentence individually
     for i, sentence in enumerate(sentences):
-        pcm = model(
+        segment = model(
             text=sentence,
             speaker_id=0,
-            context=context,
+            # TODO make this configurable
+            context=context[-2:],
             temp=temperature,
-            # TODO kv caching
             # Screw it, do a proper ring buffer later
-            use_last_gens=i > 0,
+            # e_last_gens=i > 0,
             keep_prompt_only=True,
             backbone_min_p=min_p,
         )
-        pcm_list.append(pcm.flatten())
+        pcm_list.append(segment.audio)
+        context.append(segment)
         # Add 250ms of silence in between sentences
         silence = np.zeros(int(0.25 * 24_000))
         pcm_list.append(silence)
