@@ -19,7 +19,6 @@ from csm_mlx.lm.config import ModelType
 from csm_mlx.lm.utils.prompt import CSMPromptEncoder
 from csm_mlx.generate.csm import SingleBatchGenerator
 from csm_mlx.generate.utils import GenerationSettings
-from csm_mlx.io.wav import pcm_to_wav_bytes
 
 
 @dataclass
@@ -30,6 +29,7 @@ class Segment:
     """
     24khz pcm ndarray
     """
+    codes: Optional[np.ndarray] = None
 
 
 class CSM:
@@ -158,7 +158,9 @@ class CSM:
         else:
             self.kv_cache = prev_kv_cache
 
-        return np.array(pcm).flatten()
+        return Segment(
+            audio=np.array(pcm).flatten(), codes=codes, speaker=speaker_id, text=text
+        )
 
     def warmup(self):
         print("Warming up the model")
@@ -237,14 +239,18 @@ class CSM:
             prompt_segments.append(tokens)
             mask_segments.append(tokens_mask)
 
-            # assumes audio is 24khz resampled elsewhere
-            if segment.audio.ndim > 1 and segment.audio.shape[1] == 2:
-                segment.audio = segment.audio.mean(axis=1).flatten()
+            if segment.codes is not None:
+                # Already encoded, just use it
+                mimi_codes = segment.codes
+            else:
+                # assumes audio is 24khz resampled elsewhere
+                if segment.audio.ndim > 1 and segment.audio.shape[1] == 2:
+                    segment.audio = segment.audio.mean(axis=1).flatten()
 
-            mimi_codes = self.codec.encode(
-                mx.array(segment.audio)[mx.newaxis, mx.newaxis, :]
-            )
-            mimi_codes = mimi_codes[:, : self.depth, :]
+                mimi_codes = self.codec.encode(
+                    mx.array(segment.audio)[mx.newaxis, mx.newaxis, :]
+                )
+                mimi_codes = mimi_codes[:, : self.depth, :]
             audio, audio_mask = self.prompt_encoder.tokenize_audio(mimi_codes)
             prompt_segments.append(audio)
             mask_segments.append(audio_mask)
