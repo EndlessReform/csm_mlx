@@ -35,3 +35,49 @@ def pcm_to_wav_bytes(pcm_data: np.ndarray, sample_rate: int = 24000) -> bytes:
     # Convert PCM to 16-bit samples
     wav_data = (pcm_data * 32767).astype(np.int16).tobytes()
     return bytes(header) + wav_data
+
+
+def fade_in(audio: np.ndarray, fade_duration: float, sr: int = 24000) -> np.ndarray:
+    fade_samples = min(int(fade_duration * sr), len(audio))
+    fade = np.linspace(0.0, 1.0, fade_samples)
+    audio[:fade_samples] *= fade
+    return audio
+
+
+def fade_out(audio: np.ndarray, fade_duration: float, sr: int = 24000) -> np.ndarray:
+    fade_samples = min(int(fade_duration * sr), len(audio))
+    fade = np.linspace(1.0, 0.0, fade_samples)
+    audio[-fade_samples:] *= fade
+    return audio
+
+
+def stitch_segments(
+    segments: list[np.ndarray],
+    silence_duration: float = 0.25,
+    fade_duration: float = 0.02,
+    sr: int = 24000,
+) -> np.ndarray:
+    if not segments:
+        return np.array([], dtype=np.float32)
+
+    stitched = []
+
+    for i, segment in enumerate(segments):
+        segment = segment.astype(np.float32)
+
+        # Fade in *if this is not the first segment*
+        if i > 0:
+            segment = fade_in(segment, fade_duration, sr)
+
+        # Always fade out (even on last one — just in case)
+        segment = fade_out(segment, fade_duration, sr)
+
+        # Append current segment
+        stitched.append(segment)
+
+        # Append silence unless it's the last one
+        if i < len(segments) - 1:
+            silence = np.zeros(int(silence_duration * sr), dtype=np.float32)
+            stitched.append(silence)
+
+    return np.concatenate(stitched)

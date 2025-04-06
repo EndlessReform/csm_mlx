@@ -2,6 +2,7 @@ import gradio as gr
 import numpy as np
 from csm_mlx.loaders import CSM, Segment
 from csm_mlx.lm.utils.text import TextNormalizer
+from csm_mlx.io.wav import stitch_segments
 from typing import Tuple, Optional
 from scipy.signal import resample
 import argparse
@@ -88,7 +89,7 @@ def synthesize_speech(
         pcm_list.append(silence)
 
     # Concatenate all PCM arrays into one
-    final_pcm = np.concatenate(pcm_list)
+    final_pcm = stitch_segments(pcm_list)
     return (24_000, final_pcm)
 
 
